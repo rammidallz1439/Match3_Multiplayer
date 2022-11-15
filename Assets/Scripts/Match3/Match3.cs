@@ -15,15 +15,22 @@ namespace Match3Gen
         int height = 14;
         System.Random random;
 
+        [Header("UI Elements")]
+        public RectTransform gameBoard;
+
+        [Header("Prefabs")]
+        public GameObject nodePiece;
         private void Start()
         {
-
+            StartGame();
         }
         void StartGame()
         {
             board = new Node[width, height];
             string seed = GetRandomSeed();
             InitializeBoard();
+            VerifyBoard();
+            InstantiateBoard();
         }
 
         private string GetRandomSeed()
@@ -52,9 +59,24 @@ namespace Match3Gen
 
         }
 
+        void InstantiateBoard()
+        {
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    int val = board[x, y].value;
+                    if (val <= 0) continue;
+                    GameObject p = Instantiate(nodePiece, gameBoard);
+                    RectTransform rect=p.GetComponent<RectTransform>();
+                    rect.anchoredPosition = new Vector2(50 + (100 * x), -50 - (100* y));
+                }
+            }
+        }
         void VerifyBoard()
         {
 
+            List<int> remove;
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
@@ -62,7 +84,14 @@ namespace Match3Gen
                     Point p = new Point(x, y);
                     int val = GetValueAtPoint(p);
                     if (val <= 0) continue;
-
+                    remove=new List<int>();
+                    while (isConnected(p, true).Count > 0)
+                    {
+                        val=GetValueAtPoint(p);
+                        if (!remove.Contains(val))
+                            remove.Add(val);
+                        SetValueAtPoint(p, NewValue(ref remove));
+                    }
                 }
 
             }
@@ -161,6 +190,7 @@ namespace Match3Gen
                         break;
                     }
                 }
+                if (doAdd) points.Add(p);
             }
         }
         int FillPiece()
@@ -172,7 +202,24 @@ namespace Match3Gen
 
         int GetValueAtPoint(Point p)
         {
+            if (p.x < 0 || p.x >= width || p.y < 0 || p.y >= height) return -1;
             return board[p.x, p.y].value;
+        }
+        void SetValueAtPoint(Point p,int v)
+        {
+            board[p.x,p.y].value=v;
+        }
+
+        int NewValue(ref List<int> remove)
+        {
+            List<int> available=new List<int>();
+            for (int i = 0; i < pieces.Length; i++)
+                available.Add(i + 1);
+            foreach  (int i in remove)
+                available.Remove(i);
+            if (available.Count <= 0) return 0;
+            return available[random.Next(0, available.Count)];
+
         }
     }
 
